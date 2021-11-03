@@ -92,25 +92,15 @@ class StudentModel(BaseNet):
         predict: method that makes batch predictions.
     """
 
-    # TODO
+    def __init__(self):
+        self.load_model()
+
     def load_model(self, model_path:str="model.pt"):
-        """
-        Load the student's trained model.
-        TODO: update the default `model_path` 
-              to be the correct path for your best model!
-        """
-        import pickle
         self.the_model = torch.load(model_path)
         self.results = [-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 0.1111111111111111, 0.125, 0.14285714285714285, 0.16666666666666666, 0.2, 0.2222222222222222, 0.25, 0.2857142857142857, 0.3333333333333333, 0.375, 0.4, 0.42857142857142855, 0.4444444444444444, 0.5, 0.5555555555555556, 0.5714285714285714, 0.6, 0.625, 0.6666666666666666, 0.7142857142857143, 0.75, 0.7777777777777778, 0.8, 0.8333333333333334, 0.8571428571428571, 0.875, 0.8888888888888888, 1, 1.125, 1.1428571428571428, 1.1666666666666667, 1.2, 1.25, 1.2857142857142858, 1.3333333333333333, 1.4, 1.5, 1.6, 1.6666666666666667,
 1.75, 1.8, 2.0, 2.25, 2.3333333333333335, 2.5, 2.6666666666666665, 3, 3.5, 4, 4.5, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 24, 25, 27, 28, 30, 32, 35, 36, 40, 42, 45, 48, 49, 54, 56, 63, 64, 72, 81, np.inf]
-        self.fig = plt.figure(figsize=(2, 2))
         pass
     
-    # TODO:
-    def max_pool(self,img, factor: int):
-        ds_img = np.full((img.shape[0] // factor, img.shape[1] // factor), -float('inf'), dtype=img.dtype)
-        np.maximum.at(ds_img, (np.arange(img.shape[0])[:, None] // factor, np.arange(img.shape[1]) // factor), img)
-        return ds_img
 
     def preprocess_image(self,img):
         img = img.convert('1') # convert image to black and white
@@ -140,13 +130,6 @@ class StudentModel(BaseNet):
             r = 3
         return r 
 
-    def print_digit(self,img,idx):
-        image_size = 28
-        data = img.reshape(1, image_size, image_size, 1)
-        image = np.asarray(data).squeeze()
-        self.fig.add_subplot(1, 2, idx)
-        plt.imshow(image, cmap='gray_r');
-
     def predict(
         self, images_a, images_b,
         operators, device = 'cpu'
@@ -154,40 +137,31 @@ class StudentModel(BaseNet):
         """Implement this method to perform predictions 
         given a list of images_a, images_b and operators.
         """
-        img1 = self.preprocess_image(images_a)
-        img2 = self.preprocess_image(images_b)
+        predictions = []
+        for img_a, img_b, op in zip(images_a,images_b,operators):
+            img1 = self.preprocess_image(img_a)
+            img2 = self.preprocess_image(img_b)
 
-        arr = np.array([])
-        arr = np.append(arr,img1)
-        arr = np.append(arr,img2)
-        operator_arr = np.zeros(4)
-        r = self.get_index_operation(operators)
-        operator_arr[r] = 1
-        arr = np.append(arr,operator_arr)
-        img = arr
-        img = torch.FloatTensor(img).view(1,1572)
-        with torch.no_grad():
-          logps = self.the_model(img)
-        ps = torch.exp(logps)
-        probab = list(ps.numpy()[0])
-        predict_result = self.results[probab.index(max(probab))]
-        print("Predicted Result =", predict_result)
-        img1 = img.view(1572).numpy()[:28*28]
-        img2 = img.view(1572).numpy()[28*28:-4]
-        operation = img.view(1572).numpy()[-4:]
-        print("Operation:",self.get_operation(operation))
-        self.print_digit(img1,1)
-        self.print_digit(img2,2)
-        plt.show()
-        return predict_result
+            arr = np.array([])
+            arr = np.append(arr,img1)
+            arr = np.append(arr,img2)
+            operator_arr = np.zeros(4)
+            r = self.get_index_operation(op)
+            operator_arr[r] = 1
+            arr = np.append(arr,operator_arr)
+            img = arr
+            img = torch.FloatTensor(img).view(1,1572)
+            with torch.no_grad():
+              logps = self.the_model(img)
+            ps = torch.exp(logps)
+            probab = list(ps.numpy()[0])
+            predict_result = self.results[probab.index(max(probab))]
+            print("Predicted Result =", predict_result)
+            img1 = img.view(1572).numpy()[:28*28]
+            img2 = img.view(1572).numpy()[28*28:-4]
+            operation = img.view(1572).numpy()[-4:]
+            print("Operation:",self.get_operation(operation))
+            predictions.append(predict_result)
+        return predictions
 
-images1 = [Image.open("7_3.jpg"),Image.open("7631.png"),Image.open("8030.png"),Image.open("8493.png")]
-images2 = [Image.open("3_3.jpg"),Image.open("7631.png"),Image.open("8030.png"),Image.open("8493.png")]
-ops = ["+","-","*","/"]
-model = StudentModel()
-model.load_model("model.pt")
-predictions = []
-for xa,xb,xc in zip(images1,images2,ops):
-  result = model.predict(xa,xb,xc)
-  predictions.append(result)
 
